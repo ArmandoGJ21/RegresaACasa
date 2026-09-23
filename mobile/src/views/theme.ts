@@ -1,11 +1,14 @@
 export const colors = {
-  primary: '#E8772E',
+  primary: '#FF5A3C',
   primaryText: '#FFFFFF',
-  background: '#F6F4F1',
+  background: '#F7FBFF',
   card: '#FFFFFF',
-  text: '#1F1B16',
-  muted: '#6B645C',
-  border: '#E2DDD6',
+  text: '#0D4F91',
+  blue: '#0D4F91',
+  lightBlue: '#B9D9F7',
+  softBlue: '#E8F5FF',
+  muted: '#5F7194',
+  border: '#DCEAF7',
   error: '#B3261E',
 };
 

@@ -1,93 +1,48 @@
-import { Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useReportPetController } from '../controllers/useReportPetController';
-import { PET_TYPES } from '../models/pet';
-import { FormField } from './components/FormField';
-import { PrimaryButton } from './components/PrimaryButton';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, spacing } from './theme';
 
-/** VISTA: Cuestionario para reportar una mascota perdida. */
+const fields = [
+  ['Nombre de la mascota', 'Ej. Max'],
+  ['Tipo de mascota', 'Selecciona'],
+  ['Raza', 'Ej. Golden Retriever'],
+  ['Color y señas', 'Ej. Dorado, collar azul'],
+  ['Zona donde se perdió', 'Ej. Centro'],
+  ['Información de contacto', 'Ej. 555 123 4567'],
+];
+
+/** Primer avance visual del formulario. Aún no permite escribir ni publicar. */
 export function ReportPetView() {
-  const { form, setField, image, pickImage, submit, submitting, error } = useReportPetController();
-
   return (
-    <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Pressable accessibilityRole="button" onPress={pickImage} style={styles.photo}>
-          {image ? (
-            <Image source={{ uri: image.uri }} style={styles.photoImage} />
-          ) : (
-            <Text style={styles.photoHint}>📷 Toca para elegir una foto</Text>
-          )}
-        </Pressable>
-
-        <Text style={styles.label}>Tipo de mascota</Text>
-        <View style={styles.chips}>
-          {PET_TYPES.map((type) => (
-            <Pressable
-              key={type}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: form.pet_type === type }}
-              onPress={() => setField('pet_type', type)}
-              style={[styles.chip, form.pet_type === type && styles.chipSelected]}
-            >
-              <Text style={[styles.chipText, form.pet_type === type && styles.chipTextSelected]}>{type}</Text>
-            </Pressable>
-          ))}
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <Text style={styles.title}>Publicar mascota perdida</Text>
+      <View style={styles.photo}>
+        <Text style={styles.camera}>📷</Text>
+        <Text style={styles.photoTitle}>Sube una foto de tu mascota</Text>
+        <Text style={styles.hint}>Toca para seleccionar una imagen</Text>
+      </View>
+      {fields.map(([label, placeholder]) => (
+        <View key={label} style={styles.field}>
+          <Text style={styles.label}>{label}</Text>
+          <View style={styles.input}><Text style={styles.placeholder}>{placeholder}</Text></View>
         </View>
-
-        <FormField label="Nombre" optional value={form.name} onChangeText={(v) => setField('name', v)} />
-        <FormField label="Raza" optional value={form.breed} onChangeText={(v) => setField('breed', v)} />
-        <FormField
-          label="Color / señas particulares"
-          value={form.color_description}
-          onChangeText={(v) => setField('color_description', v)}
-          placeholder="Miel con mancha blanca"
-        />
-        <FormField label="Zona" value={form.zone} onChangeText={(v) => setField('zone', v)} placeholder="Centro" />
-        <FormField
-          label="Teléfono de contacto"
-          value={form.contact_info}
-          onChangeText={(v) => setField('contact_info', v)}
-          keyboardType="phone-pad"
-          placeholder="4491234567"
-        />
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <PrimaryButton title="Publicar reporte" onPress={submit} loading={submitting} />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ))}
+      <View style={styles.button}><Text style={styles.buttonText}>Publicar</Text></View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg },
-  photo: {
-    aspectRatio: 3 / 2,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.muted,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-    marginBottom: spacing.lg,
-    backgroundColor: colors.card,
-  },
-  photoImage: { width: '100%', height: '100%' },
-  photoHint: { color: colors.muted, fontSize: 16 },
-  label: { color: colors.text, fontWeight: '600', marginBottom: spacing.xs },
-  chips: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  chip: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  chipSelected: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.text },
-  chipTextSelected: { color: colors.primaryText, fontWeight: '600' },
-  error: { color: colors.error, marginBottom: spacing.md },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl },
+  title: { color: colors.blue, fontSize: 23, fontWeight: '700', textAlign: 'center', marginBottom: spacing.lg },
+  photo: { backgroundColor: colors.card, borderColor: colors.lightBlue, borderWidth: 2, borderStyle: 'dashed', borderRadius: 16, minHeight: 160, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+  camera: { fontSize: 34, marginBottom: spacing.xs },
+  photoTitle: { color: colors.blue, fontSize: 16, fontWeight: '700' },
+  hint: { color: colors.muted, fontSize: 13, marginTop: spacing.xs },
+  field: { marginBottom: spacing.md },
+  label: { color: colors.blue, fontWeight: '700', fontSize: 14, marginBottom: spacing.xs },
+  input: { backgroundColor: colors.card, borderColor: colors.lightBlue, borderWidth: 1, borderRadius: 11, minHeight: 48, paddingHorizontal: spacing.md, justifyContent: 'center' },
+  placeholder: { color: colors.muted, fontSize: 15 },
+  button: { backgroundColor: colors.primary, minHeight: 50, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginTop: spacing.md },
+  buttonText: { color: colors.primaryText, fontSize: 17, fontWeight: '700' },
 });
