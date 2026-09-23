@@ -26,7 +26,7 @@ sequenceDiagram
 |---|---|
 | Robo de la llave de Azure | Solo vive en `backend/.env` (en `.gitignore`); la app nunca la recibe |
 | Alguien sube miles de archivos | Máx. **5 URLs de subida por minuto por IP** y **tope global de 200 fotos al día** (429) |
-| Spam de publicaciones o comentarios | Máx. **20 escrituras por minuto por IP** (429) |
+| Spam de publicaciones | Máx. **20 publicaciones por minuto por IP** (429) |
 | Subir cualquier archivo con una URL filtrada | Cada SAS sirve para **un solo blob**, con nombre aleatorio elegido por la API, solo permisos Create/Write y vence en 10 min |
 | Publicar enlaces a imágenes externas | `POST /api/v1/pets` solo acepta `image_url` de **nuestro** contenedor |
 | Usar tu Storage como hosting gratis (hotlinking) | Contenedor **privado**; las URLs de lectura caducan en 60 min |

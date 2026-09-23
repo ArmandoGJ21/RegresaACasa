@@ -28,16 +28,6 @@ public static class DbSeeder
                 ContactInfo = "4491234567",
                 ImageUrl = "https://storage.azure.com/foto.jpg",
                 CreatedAt = now.AddHours(-1),
-                Comments =
-                [
-                    new Comment
-                    {
-                        CommentId = Guid.NewGuid(),
-                        UserName = "Ana",
-                        Text = "Lo vi cerca del parque",
-                        CreatedAt = now.AddMinutes(-30),
-                    },
-                ],
             },
             new Pet
             {

@@ -27,7 +27,7 @@ flowchart LR
     end
 
     subgraph API["Backend ASP.NET Core .NET 10"]
-        CT[Controllers<br/>Pets · Comments · Uploads]
+        CT[Controllers<br/>Pets · Uploads]
         S[Services<br/>PetService · AzureBlobImageStorageService]
         D[Data<br/>AppDbContext EF Core]
         CT --> S --> D
@@ -58,7 +58,7 @@ sequenceDiagram
     API->>API: Valida datos (DataAnnotations)
     API->>DB: 4. INSERT pets
     DB-->>API: OK
-    API-->>App: 201 Created (publicación con comments: [])
+    API-->>App: 201 Created (publicación creada)
 ```
 
 ---
@@ -69,10 +69,9 @@ sequenceDiagram
 RegresaACasa.Api/
 ├── Controllers/          ← C: reciben HTTP, validan y delegan
 │   ├── PetsController.cs        GET/POST /api/v1/pets
-│   ├── CommentsController.cs    POST /api/v1/pets/{id}/comments
 │   └── UploadsController.cs     POST /api/v1/uploads/images
 ├── Models/               ← M
-│   ├── Entities/                Pet, Comment (tablas)
+│   ├── Entities/                Pet (tabla)
 │   ├── Dtos/                    Request/Response = la "Vista" JSON
 │   └── PetMappings.cs           Entidad → DTO
 ├── Services/             Lógica de negocio (interfaces + implementación)
@@ -81,10 +80,10 @@ RegresaACasa.Api/
 └── Program.cs            Composición (.env, DI, JSON snake_case, errores, BD)
 ```
 
-- **Modelo**: las entidades EF (`Pet`, `Comment`) representan la BD; los DTOs representan el contrato.
-- **Vista**: en una API la vista es la representación JSON. Los DTOs (`PetResponse`, `CommentResponse`,
-  `ErrorResponse`) + la política `snake_case` definen exactamente qué ve el cliente
-  (p. ej. `comment_id` existe en BD pero nunca se expone).
+- **Modelo**: la entidad EF `Pet` representa la BD; los DTOs representan el contrato.
+- **Vista**: en una API la vista es la representación JSON. Los DTOs (`PetResponse`, `ErrorResponse`,
+  `ImageUploadResponse`) + la política `snake_case` definen exactamente qué ve el cliente
+  (p. ej. `created_at` existe en BD pero no se expone).
 - **Controlador**: delgado; no toca EF directamente, llama a `IPetService`.
 - **Servicios**: capa entre controlador y datos para que la lógica sea testeable. No se agregó un
   patrón Repository porque `DbContext` ya cumple ese rol (Unit of Work + Repository).
@@ -104,7 +103,7 @@ src/
 │   ├── _layout.tsx              Stack + PetsProvider
 │   ├── index.tsx                Muro
 │   ├── report.tsx               Cuestionario (modal)
-│   └── pets/[id].tsx            Detalle + comentarios
+│   └── pets/[id].tsx            Detalle + botón para llamar
 ├── models/               ← M: tipos del contrato, validaciones y clientes HTTP
 │   ├── pet.ts
 │   └── api/  httpClient.ts · petApi.ts · imageUploadApi.ts
@@ -115,7 +114,7 @@ src/
 │   └── usePetDetailController.ts
 ├── views/                ← V: componentes visuales sin lógica de red
 │   ├── FeedView.tsx · ReportPetView.tsx · PetDetailView.tsx
-│   ├── components/  PetCard · CommentItem · FormField · PrimaryButton
+│   ├── components/  PetCard · FormField · PrimaryButton
 │   └── theme.ts
 └── config/env.ts         EXPO_PUBLIC_API_URL, EXPO_PUBLIC_SKIP_IMAGE_UPLOAD
 ```
@@ -123,7 +122,7 @@ src/
 Regla: **Vista → Controlador → Modelo**. Una vista solo llama a su hook controlador; el controlador usa
 los modelos/API y actualiza el estado; ninguna vista hace `fetch`.
 
-Pantallas (de los mockups): **Muro**, **Cuestionario** y **Comentarios** (detalle de publicación).
+Pantallas: **Muro**, **Cuestionario** y **Detalle** de la publicación (con botón para llamar al dueño).
 
 ---
 
@@ -135,10 +134,11 @@ Pantallas (de los mockups): **Muro**, **Cuestionario** y **Comentarios** (detall
 | Base de datos | PostgreSQL o MongoDB | PostgreSQL + EF Core | Modelo relacional simple (1 → N), migraciones |
 | Subida de foto | App → Azure directo | Igual, con URL SAS firmada por la API (`POST /api/v1/uploads/images`) | La app no debe contener la llave de la cuenta de Azure |
 | Lectura de fotos | URL pública | Contenedor **privado**; el muro devuelve `image_url` con SAS de lectura (60 min) | Evita abuso del Storage; ver [azure-blob-storage.md](azure-blob-storage.md) |
+| Comentarios | `POST /pets/:id/comments` y `comments` en cada publicación | **Eliminados** | Fuera del alcance del MVP; el contacto es por el teléfono de la publicación |
 | Abuso | sin especificar | Límites por IP y tope diario global de fotos (429) | Evitar sobrecarga de archivos |
 | `id` | `"123"` | UUID (string) | El ER define `uuid`; `mock/db.json` sigue sirviendo para el mock |
 | `name`, `breed` | sin especificar | Opcionales | Una mascota encontrada puede no tener nombre/raza conocidos |
 | Orden del muro | "recientes" | `created_at` desc, máx. 100 | Evita respuestas enormes |
 
-Pendientes naturales para después del MVP: paginación del muro, filtro por `zone`, moderación de
-comentarios, autenticación (hoy todos los usuarios comparten permisos, como pide el diseño).
+Pendientes naturales para después del MVP: paginación del muro, filtro por `zone`,
+autenticación (hoy todos los usuarios comparten permisos, como pide el diseño).

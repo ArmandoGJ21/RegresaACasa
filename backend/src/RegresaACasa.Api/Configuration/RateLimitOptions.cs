@@ -18,7 +18,7 @@ public class RateLimitOptions
     [Range(1, 100_000)]
     public int UploadsPerDay { get; set; } = 200;
 
-    /// <summary>Publicaciones y comentarios por IP por minuto.</summary>
+    /// <summary>Publicaciones nuevas por IP por minuto.</summary>
     [Range(1, 1000)]
     public int WritesPerMinutePerIp { get; set; } = 20;
 }

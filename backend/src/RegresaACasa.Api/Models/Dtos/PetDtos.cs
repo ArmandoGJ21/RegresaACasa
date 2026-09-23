@@ -13,8 +13,7 @@ public record PetResponse(
     string ColorDescription,
     string Zone,
     string ContactInfo,
-    string ImageUrl,
-    IReadOnlyList<CommentResponse> Comments);
+    string ImageUrl);
 
 public class CreatePetRequest
 {

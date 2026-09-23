@@ -14,6 +14,4 @@ public class Pet
     public string ContactInfo { get; set; } = string.Empty;
     public string ImageUrl { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
-
-    public List<Comment> Comments { get; set; } = [];
 }

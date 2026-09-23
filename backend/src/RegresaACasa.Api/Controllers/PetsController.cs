@@ -14,7 +14,7 @@ namespace RegresaACasa.Api.Controllers;
 [Produces("application/json")]
 public class PetsController(IPetService pets, IImageStorageService images) : ControllerBase
 {
-    /// <summary>Lista las publicaciones más recientes con sus comentarios.</summary>
+    /// <summary>Lista las publicaciones más recientes.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<PetResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PetResponse>>> GetAll(CancellationToken ct)

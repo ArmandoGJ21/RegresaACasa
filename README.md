@@ -1,7 +1,7 @@
 # Regresa a Casa 
 
 Red social para reportar mascotas perdidas: un **muro** de publicaciones, un **cuestionario** para
-reportar y **comentarios** para avisar si alguien vio a la mascota.
+reportar y un **detalle** con el teléfono del dueño para avisar si alguien vio a la mascota.
 
 - **App móvil:** React Native + Expo + TypeScript (patrón MVC)
 - **Backend:** ASP.NET Core **.NET 10** Web API (patrón MVC)

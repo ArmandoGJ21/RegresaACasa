@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { petApi } from '../models/api/petApi';
-import type { Pet, PetComment } from '../models/pet';
+import type { Pet } from '../models/pet';
 
 // Estado compartido del muro entre pantallas. Los controladores lo consumen;
 // las vistas nunca hablan con la API directamente.
@@ -11,7 +11,6 @@ type PetsState = {
   error: string | null;
   refresh: () => Promise<void>;
   addPet: (pet: Pet) => void;
-  addComment: (petId: string, comment: PetComment) => void;
 };
 
 const PetsContext = createContext<PetsState | null>(null);
@@ -35,15 +34,9 @@ export function PetsProvider({ children }: { children: ReactNode }) {
 
   const addPet = useCallback((pet: Pet) => setPets((current) => [pet, ...current]), []);
 
-  const addComment = useCallback((petId: string, comment: PetComment) => {
-    setPets((current) =>
-      current.map((p) => (p.id === petId ? { ...p, comments: [...p.comments, comment] } : p)),
-    );
-  }, []);
-
   const value = useMemo(
-    () => ({ pets, loading, error, refresh, addPet, addComment }),
-    [pets, loading, error, refresh, addPet, addComment],
+    () => ({ pets, loading, error, refresh, addPet }),
+    [pets, loading, error, refresh, addPet],
   );
 
   return <PetsContext.Provider value={value}>{children}</PetsContext.Provider>;

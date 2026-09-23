@@ -14,7 +14,6 @@ public class PetService(AppDbContext db, IImageStorageService images, TimeProvid
     {
         var pets = await db.Pets
             .AsNoTracking()
-            .Include(p => p.Comments)
             .OrderByDescending(p => p.CreatedAt)
             .Take(FeedSize)
             .ToListAsync(ct);
@@ -40,26 +39,5 @@ public class PetService(AppDbContext db, IImageStorageService images, TimeProvid
         db.Pets.Add(pet);
         await db.SaveChangesAsync(ct);
         return pet.ToResponse(images.ToReadUrl);
-    }
-
-    public async Task<CommentResponse?> AddCommentAsync(Guid petId, CreateCommentRequest request, CancellationToken ct = default)
-    {
-        if (!await db.Pets.AnyAsync(p => p.Id == petId, ct))
-        {
-            return null;
-        }
-
-        var comment = new Comment
-        {
-            CommentId = Guid.NewGuid(),
-            PetId = petId,
-            UserName = request.UserName!.Trim(),
-            Text = request.Text!.Trim(),
-            CreatedAt = clock.GetUtcNow().UtcDateTime,
-        };
-
-        db.Comments.Add(comment);
-        await db.SaveChangesAsync(ct);
-        return comment.ToResponse();
     }
 }

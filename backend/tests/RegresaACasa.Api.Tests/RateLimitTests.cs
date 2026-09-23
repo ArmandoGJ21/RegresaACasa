@@ -38,14 +38,21 @@ public class RateLimitTests
     }
 
     [Fact]
-    public async Task Comments_OverLimit_Returns429()
+    public async Task CreatePet_OverLimit_Returns429()
     {
         using var factory = new LowLimitsFactory();
         var client = factory.CreateClient();
-        var comment = new { user_name = "Ana", text = "Hola" };
+        var pet = new
+        {
+            pet_type = "Perro",
+            color_description = "Miel",
+            zone = "Centro",
+            contact_info = "4491234567",
+            image_url = "https://storage.azure.com/foto.jpg",
+        };
 
-        await client.PostAsJsonAsync("/api/v1/pets/123/comments", comment);
-        var rejected = await client.PostAsJsonAsync("/api/v1/pets/123/comments", comment);
+        await client.PostAsJsonAsync("/api/v1/pets", pet);
+        var rejected = await client.PostAsJsonAsync("/api/v1/pets", pet);
 
         Assert.Equal(HttpStatusCode.TooManyRequests, rejected.StatusCode);
     }

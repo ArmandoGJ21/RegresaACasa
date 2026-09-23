@@ -35,11 +35,11 @@ public class PetsApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.True(first.TryGetProperty("pet_type", out _));
         Assert.True(first.TryGetProperty("color_description", out _));
         Assert.True(first.TryGetProperty("image_url", out _));
-        Assert.True(first.TryGetProperty("comments", out _));
+        Assert.False(first.TryGetProperty("comments", out _));
     }
 
     [Fact]
-    public async Task CreatePet_Returns201WithEmptyComments()
+    public async Task CreatePet_Returns201()
     {
         var response = await _client.PostAsJsonAsync("/api/v1/pets", ValidPet());
 
@@ -48,7 +48,6 @@ public class PetsApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.False(string.IsNullOrEmpty(pet.GetProperty("id").GetString()));
         Assert.Equal("Perro", pet.GetProperty("pet_type").GetString());
         Assert.Equal("4491234567", pet.GetProperty("contact_info").GetString());
-        Assert.Equal(0, pet.GetProperty("comments").GetArrayLength());
     }
 
     [Fact]
@@ -60,43 +59,6 @@ public class PetsApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var error = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.False(error.GetProperty("success").GetBoolean());
         Assert.Equal("El campo 'zone' es requerido", error.GetProperty("message").GetString());
-    }
-
-    [Fact]
-    public async Task AddComment_ToExistingPet_Returns201AndAppearsInFeed()
-    {
-        var created = await (await _client.PostAsJsonAsync("/api/v1/pets", ValidPet()))
-            .Content.ReadFromJsonAsync<JsonElement>();
-        var petId = created.GetProperty("id").GetString();
-
-        var response = await _client.PostAsJsonAsync(
-            $"/api/v1/pets/{petId}/comments",
-            new { user_name = "Ana", text = "Lo vi cerca del parque" });
-
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var comment = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.Equal("Ana", comment.GetProperty("user_name").GetString());
-        Assert.True(comment.TryGetProperty("created_at", out _));
-        Assert.False(comment.TryGetProperty("comment_id", out _));
-
-        var feed = await _client.GetFromJsonAsync<JsonElement>("/api/v1/pets");
-        var pet = feed.EnumerateArray().Single(p => p.GetProperty("id").GetString() == petId);
-        Assert.Equal(1, pet.GetProperty("comments").GetArrayLength());
-    }
-
-    [Theory]
-    [InlineData("123")]
-    [InlineData("3f2504e0-4f89-11d3-9a0c-0305e82c3301")]
-    public async Task AddComment_ToUnknownPet_Returns404ContractError(string id)
-    {
-        var response = await _client.PostAsJsonAsync(
-            $"/api/v1/pets/{id}/comments",
-            new { user_name = "Ana", text = "Hola" });
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        var error = await response.Content.ReadFromJsonAsync<JsonElement>();
-        Assert.False(error.GetProperty("success").GetBoolean());
-        Assert.Equal("No existe una publicación con ese id", error.GetProperty("message").GetString());
     }
 
     [Fact]

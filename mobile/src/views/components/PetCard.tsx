@@ -13,10 +13,7 @@ export function PetCard({ pet, onPress }: Props) {
         <Text style={styles.title}>{title}</Text>
         {pet.breed ? <Text style={styles.meta}>{pet.breed}</Text> : null}
         <Text style={styles.meta}>{pet.color_description}</Text>
-        <View style={styles.row}>
-          <Text style={styles.zone}>📍 {pet.zone}</Text>
-          <Text style={styles.meta}>💬 {pet.comments.length}</Text>
-        </View>
+        <Text style={styles.zone}>📍 {pet.zone}</Text>
       </View>
     </Pressable>
   );
@@ -35,6 +32,5 @@ const styles = StyleSheet.create({
   body: { padding: spacing.md, gap: 2 },
   title: { fontSize: 18, fontWeight: '700', color: colors.text },
   meta: { color: colors.muted },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.xs },
-  zone: { color: colors.text, fontWeight: '600' },
+  zone: { color: colors.text, fontWeight: '600', marginTop: spacing.xs },
 });

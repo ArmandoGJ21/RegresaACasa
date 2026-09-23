@@ -8,10 +8,7 @@
       "color_description": "Miel con mancha blanca",
       "zone": "Centro",
       "contact_info": "4491234567",
-      "image_url": "https://storage.azure.com/foto.jpg",
-      "comments": [
-        { "user_name": "Ana", "text": "Lo vi cerca del parque", "created_at": "2026-09-22T02:00:00Z" }
-      ]
+      "image_url": "https://storage.azure.com/foto.jpg"
     },
     {
       "id": "124",
@@ -21,8 +18,7 @@
       "color_description": "Blanco con puntos grises",
       "zone": "Pulgas",
       "contact_info": "4497654321",
-      "image_url": "https://storage.azure.com/luna.jpg",
-      "comments": []
+      "image_url": "https://storage.azure.com/luna.jpg"
     }
   ]
 }

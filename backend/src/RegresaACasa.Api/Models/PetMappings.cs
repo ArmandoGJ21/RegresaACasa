@@ -14,12 +14,5 @@ public static class PetMappings
         pet.ColorDescription,
         pet.Zone,
         pet.ContactInfo,
-        toImageUrl(pet.ImageUrl),
-        pet.Comments
-            .OrderBy(c => c.CreatedAt)
-            .Select(c => c.ToResponse())
-            .ToList());
-
-    public static CommentResponse ToResponse(this Comment comment) =>
-        new(comment.UserName, comment.Text, comment.CreatedAt);
+        toImageUrl(pet.ImageUrl));
 }

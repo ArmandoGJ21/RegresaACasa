@@ -10,9 +10,8 @@ Todos los errores usan el formato:
 
 | Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/api/v1/pets` | Muro: publicaciones recientes con comentarios |
+| GET | `/api/v1/pets` | Muro: publicaciones recientes |
 | POST | `/api/v1/pets` | Cuestionario: nueva publicación |
-| POST | `/api/v1/pets/{id}/comments` | Agrega un comentario |
 | POST | `/api/v1/uploads/images` | URL firmada para subir la foto a Azure *(agregado)* |
 
 La especificación OpenAPI se sirve en `GET /openapi/v1.json` (entorno Development).
@@ -25,7 +24,7 @@ Hay ejemplos listos para ejecutar en [`backend/src/RegresaACasa.Api/RegresaACasa
 | Endpoint | Límite | Al superarlo |
 |---|---|---|
 | `POST /api/v1/uploads/images` | 5 por minuto por IP y 200 al día en total | **429** |
-| `POST /api/v1/pets` y `POST .../comments` | 20 por minuto por IP (compartido) | **429** |
+| `POST /api/v1/pets` | 20 por minuto por IP | **429** |
 
 ```json
 { "success": false, "message": "Demasiadas solicitudes, intenta de nuevo más tarde" }
@@ -38,7 +37,6 @@ Configurables con `RateLimits__*` (ver [azure-blob-storage.md](azure-blob-storag
 ## `GET /api/v1/pets`
 
 Devuelve hasta 100 publicaciones ordenadas de la más reciente a la más antigua.
-Los comentarios de cada una van en orden cronológico.
 
 Las fotos están en un contenedor **privado**: `image_url` llega con una firma de lectura (SAS) válida
 por 60 minutos. La app debe volver a pedir el muro para obtener URLs nuevas; no debe guardarlas.
@@ -54,10 +52,7 @@ por 60 minutos. La app debe volver a pedir el muro para obtener URLs nuevas; no 
     "color_description": "Miel con mancha blanca",
     "zone": "Centro",
     "contact_info": "4491234567",
-    "image_url": "https://storage.azure.com/foto.jpg",
-    "comments": [
-      { "user_name": "Ana", "text": "Lo vi cerca del parque", "created_at": "2026-09-22T02:00:00Z" }
-    ]
+    "image_url": "https://storage.azure.com/foto.jpg"
   }
 ]
 ```
@@ -89,7 +84,7 @@ La foto ya debe estar subida (ver `uploads/images`).
 }
 ```
 
-**201**: la publicación creada, con `"comments": []` y `image_url` ya firmada para lectura.
+**201**: la publicación creada, con `image_url` ya firmada para lectura.
 
 **400**
 ```json
@@ -99,30 +94,6 @@ La foto ya debe estar subida (ver `uploads/images`).
 { "success": false, "message": "El campo 'image_url' debe ser una foto subida con /api/v1/uploads/images" }
 ```
 (Con Azure configurado, solo se aceptan fotos de nuestro contenedor; en desarrollo sin Azure se acepta cualquier URL.)
-
-## `POST /api/v1/pets/{id}/comments`
-
-| Campo | Tipo | Requerido | Máx. |
-|---|---|---|---|
-| `user_name` | string | sí | 60 |
-| `text` | string | sí | 500 |
-
-**Request**
-```json
-{ "user_name": "Ana", "text": "Lo vi cerca del parque" }
-```
-
-**201**
-```json
-{ "user_name": "Ana", "text": "Lo vi cerca del parque", "created_at": "2026-09-22T02:00:00Z" }
-```
-
-**400** — campo faltante (mismo formato que arriba).
-
-**404**
-```json
-{ "success": false, "message": "No existe una publicación con ese id" }
-```
 
 ## `POST /api/v1/uploads/images` *(agregado)*
 
