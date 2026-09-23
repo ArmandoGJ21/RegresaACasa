@@ -25,4 +25,8 @@ public class AzureBlobOptions
     /// <summary>Vigencia de la URL de subida. Corta a propósito: solo sirve para una foto.</summary>
     [Range(1, 60, ErrorMessage = "AzureBlob:SasExpiryMinutes debe estar entre 1 y 60")]
     public int SasExpiryMinutes { get; set; } = 10;
+
+    /// <summary>Vigencia de las URLs de lectura que devuelve el muro (el contenedor es privado).</summary>
+    [Range(5, 1440, ErrorMessage = "AzureBlob:ReadSasMinutes debe estar entre 5 y 1440")]
+    public int ReadSasMinutes { get; set; } = 60;
 }

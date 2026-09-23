@@ -6,7 +6,7 @@ using RegresaACasa.Api.Models.Entities;
 
 namespace RegresaACasa.Api.Services;
 
-public class PetService(AppDbContext db, TimeProvider clock) : IPetService
+public class PetService(AppDbContext db, IImageStorageService images, TimeProvider clock) : IPetService
 {
     private const int FeedSize = 100;
 
@@ -19,7 +19,7 @@ public class PetService(AppDbContext db, TimeProvider clock) : IPetService
             .Take(FeedSize)
             .ToListAsync(ct);
 
-        return pets.Select(p => p.ToResponse()).ToList();
+        return pets.Select(p => p.ToResponse(images.ToReadUrl)).ToList();
     }
 
     public async Task<PetResponse> CreateAsync(CreatePetRequest request, CancellationToken ct = default)
@@ -39,7 +39,7 @@ public class PetService(AppDbContext db, TimeProvider clock) : IPetService
 
         db.Pets.Add(pet);
         await db.SaveChangesAsync(ct);
-        return pet.ToResponse();
+        return pet.ToResponse(images.ToReadUrl);
     }
 
     public async Task<CommentResponse?> AddCommentAsync(Guid petId, CreateCommentRequest request, CancellationToken ct = default)

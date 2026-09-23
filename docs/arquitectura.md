@@ -28,14 +28,14 @@ flowchart LR
 
     subgraph API["Backend ASP.NET Core .NET 10"]
         CT[Controllers<br/>Pets · Comments · Uploads]
-        S[Services<br/>PetService · AzureBlobImageUploadService]
+        S[Services<br/>PetService · AzureBlobImageStorageService]
         D[Data<br/>AppDbContext EF Core]
         CT --> S --> D
     end
 
     M -- "HTTP JSON /api/v1" --> CT
-    M -- "PUT foto (URL SAS)" --> Blob[(Azure Blob Storage)]
-    S -- "firma URL SAS" --> Blob
+    M -- "PUT / GET foto (URL SAS)" --> Blob[(Azure Blob privado)]
+    S -- "firma URLs SAS" --> Blob
     D --> DB[(PostgreSQL)]
 ```
 
@@ -134,6 +134,8 @@ Pantallas (de los mockups): **Muro**, **Cuestionario** y **Comentarios** (detall
 | Backend | Node.js / Express | ASP.NET Core .NET 10 | Requisito del proyecto |
 | Base de datos | PostgreSQL o MongoDB | PostgreSQL + EF Core | Modelo relacional simple (1 → N), migraciones |
 | Subida de foto | App → Azure directo | Igual, con URL SAS firmada por la API (`POST /api/v1/uploads/images`) | La app no debe contener la llave de la cuenta de Azure |
+| Lectura de fotos | URL pública | Contenedor **privado**; el muro devuelve `image_url` con SAS de lectura (60 min) | Evita abuso del Storage; ver [azure-blob-storage.md](azure-blob-storage.md) |
+| Abuso | sin especificar | Límites por IP y tope diario global de fotos (429) | Evitar sobrecarga de archivos |
 | `id` | `"123"` | UUID (string) | El ER define `uuid`; `mock/db.json` sigue sirviendo para el mock |
 | `name`, `breed` | sin especificar | Opcionales | Una mascota encontrada puede no tener nombre/raza conocidos |
 | Orden del muro | "recientes" | `created_at` desc, máx. 100 | Evita respuestas enormes |

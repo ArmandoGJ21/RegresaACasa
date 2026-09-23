@@ -5,7 +5,8 @@ namespace RegresaACasa.Api.Models;
 
 public static class PetMappings
 {
-    public static PetResponse ToResponse(this Pet pet) => new(
+    /// <param name="toImageUrl">Transforma la image_url guardada en la que ve el cliente (URL firmada).</param>
+    public static PetResponse ToResponse(this Pet pet, Func<string, string> toImageUrl) => new(
         pet.Id.ToString(),
         pet.PetType,
         pet.Name,
@@ -13,7 +14,7 @@ public static class PetMappings
         pet.ColorDescription,
         pet.Zone,
         pet.ContactInfo,
-        pet.ImageUrl,
+        toImageUrl(pet.ImageUrl),
         pet.Comments
             .OrderBy(c => c.CreatedAt)
             .Select(c => c.ToResponse())

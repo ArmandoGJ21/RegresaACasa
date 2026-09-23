@@ -1,4 +1,4 @@
-# Regresa a Casa 🐾
+# Regresa a Casa 
 
 Red social para reportar mascotas perdidas: un **muro** de publicaciones, un **cuestionario** para
 reportar y **comentarios** para avisar si alguien vio a la mascota.

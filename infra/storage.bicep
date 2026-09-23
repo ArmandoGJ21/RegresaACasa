@@ -1,5 +1,6 @@
 // Azure Blob Storage para las fotos de Regresa a Casa.
-// Crea: cuenta de almacenamiento + servicio de blobs (CORS, papelera) + contenedor público de lectura.
+// Crea: cuenta de almacenamiento + servicio de blobs (CORS, papelera) + contenedor PRIVADO.
+// Nadie lee ni escribe fotos sin una URL firmada (SAS) que emite la API.
 // Despliegue: infra/deploy-storage.ps1 (o ver docs/azure-blob-storage.md).
 
 @description('Región de Azure. Con Azure for Students usa una región permitida por tu suscripción.')
@@ -36,8 +37,8 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-05-01' = {
     accessTier: 'Hot'
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
-    allowBlobPublicAccess: true // Las fotos del muro se leen sin autenticación (solo lectura).
-    allowSharedKeyAccess: true // La API firma las URLs SAS con la llave de la cuenta.
+    allowBlobPublicAccess: false // Sin acceso anónimo: las fotos se leen con URL firmada temporal.
+    allowSharedKeyAccess: true // La API firma las URLs SAS con la llave (que solo vive en backend/.env).
     publicNetworkAccess: 'Enabled'
   }
 }
@@ -77,7 +78,7 @@ resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@20
   parent: blobService
   name: containerName
   properties: {
-    publicAccess: 'Blob' // Lectura anónima de cada foto; NO permite listar el contenedor.
+    publicAccess: 'None' // Privado: ni lectura ni listado anónimos.
   }
 }
 

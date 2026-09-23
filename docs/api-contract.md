@@ -20,10 +20,28 @@ Hay ejemplos listos para ejecutar en [`backend/src/RegresaACasa.Api/RegresaACasa
 
 ---
 
+### Límites anti-abuso
+
+| Endpoint | Límite | Al superarlo |
+|---|---|---|
+| `POST /api/v1/uploads/images` | 5 por minuto por IP y 200 al día en total | **429** |
+| `POST /api/v1/pets` y `POST .../comments` | 20 por minuto por IP (compartido) | **429** |
+
+```json
+{ "success": false, "message": "Demasiadas solicitudes, intenta de nuevo más tarde" }
+```
+
+Configurables con `RateLimits__*` (ver [azure-blob-storage.md](azure-blob-storage.md#4-restricciones-del-env)).
+
+---
+
 ## `GET /api/v1/pets`
 
 Devuelve hasta 100 publicaciones ordenadas de la más reciente a la más antigua.
 Los comentarios de cada una van en orden cronológico.
+
+Las fotos están en un contenedor **privado**: `image_url` llega con una firma de lectura (SAS) válida
+por 60 minutos. La app debe volver a pedir el muro para obtener URLs nuevas; no debe guardarlas.
 
 **200**
 ```json
@@ -56,7 +74,7 @@ La foto ya debe estar subida (ver `uploads/images`).
 | `color_description` | string | sí | 200 |
 | `zone` | string | sí | 80 |
 | `contact_info` | string | sí | 80 |
-| `image_url` | string (URL http/https) | sí | 500 |
+| `image_url` | string: el `image_url` que devolvió `uploads/images` | sí | 500 |
 
 **Request**
 ```json
@@ -71,12 +89,16 @@ La foto ya debe estar subida (ver `uploads/images`).
 }
 ```
 
-**201** — la publicación creada, con `"comments": []`.
+**201**: la publicación creada, con `"comments": []` y `image_url` ya firmada para lectura.
 
 **400**
 ```json
 { "success": false, "message": "El campo 'zone' es requerido" }
 ```
+```json
+{ "success": false, "message": "El campo 'image_url' debe ser una foto subida con /api/v1/uploads/images" }
+```
+(Con Azure configurado, solo se aceptan fotos de nuestro contenedor; en desarrollo sin Azure se acepta cualquier URL.)
 
 ## `POST /api/v1/pets/{id}/comments`
 
@@ -132,4 +154,6 @@ Content-Type: image/jpeg
 
 y envía `image_url` en `POST /api/v1/pets`.
 
-**503** — Azure no está configurado (`AzureBlob:ConnectionString` vacío).
+**429**: límite superado (ver arriba).
+
+**503**: Azure no está configurado (`AzureBlob:ConnectionString` vacío).

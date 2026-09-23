@@ -1,41 +1,62 @@
-# Azure Blob Storage y variables de entorno
+# Azure Blob Storage, seguridad y variables de entorno
 
-Las fotos de las mascotas se guardan en Azure Blob Storage. La app **nunca** tiene la llave de Azure:
-le pide a la API una URL temporal (SAS) de solo escritura, sube la foto con ella y luego manda la
-`image_url` en `POST /api/v1/pets` (ver [arquitectura.md](arquitectura.md#2-flujo-de-publicación-foto-primero-luego-json)).
+Las fotos de las mascotas se guardan en un contenedor **privado** de Azure Blob Storage. Nadie puede
+leer ni escribir fotos sin una **URL firmada (SAS)** temporal que emite la API, y la llave de Azure
+solo existe en `backend/.env` (nunca en git ni en la app).
 
-## 1. Qué se crea
+```mermaid
+sequenceDiagram
+    participant App as App móvil
+    participant API as API .NET
+    participant Azure as Blob privado
+
+    App->>API: POST /api/v1/uploads/images (límite por IP y diario)
+    API-->>App: upload_url (SAS escritura, 10 min, 1 foto) + image_url
+    App->>Azure: PUT foto con upload_url
+    App->>API: POST /api/v1/pets { image_url }
+    API->>API: ¿image_url es una foto de NUESTRO contenedor?
+    App->>API: GET /api/v1/pets
+    API-->>App: image_url con SAS de lectura (60 min)
+    App->>Azure: GET foto con la URL firmada
+```
+
+## 1. Protección contra abuso
+
+| Riesgo | Protección |
+|---|---|
+| Robo de la llave de Azure | Solo vive en `backend/.env` (en `.gitignore`); la app nunca la recibe |
+| Alguien sube miles de archivos | Máx. **5 URLs de subida por minuto por IP** y **tope global de 200 fotos al día** (429) |
+| Spam de publicaciones o comentarios | Máx. **20 escrituras por minuto por IP** (429) |
+| Subir cualquier archivo con una URL filtrada | Cada SAS sirve para **un solo blob**, con nombre aleatorio elegido por la API, solo permisos Create/Write y vence en 10 min |
+| Publicar enlaces a imágenes externas | `POST /api/v1/pets` solo acepta `image_url` de **nuestro** contenedor |
+| Usar tu Storage como hosting gratis (hotlinking) | Contenedor **privado**; las URLs de lectura caducan en 60 min |
+| Tráfico sin cifrar | Solo HTTPS, TLS 1.2 mínimo |
+
+Los límites se ajustan con variables `RateLimits__*` (ver sección 4). Se guardan en memoria: se
+reinician si reinicias la API, lo cual es suficiente para un proyecto escolar.
+
+> Una SAS no puede limitar el tamaño del archivo. La app comprime la foto (`quality: 0.7`) y el tope
+> diario limita cuántas se pueden subir.
+
+## 2. Qué debe tener la cuenta de Azure
 
 Definido en [`infra/storage.bicep`](../infra/storage.bicep):
 
-| Recurso | Configuración | Por qué |
-|---|---|---|
-| Grupo de recursos `rg-regresaacasa` | región configurable | Agrupa todo para borrarlo fácil |
-| Cuenta de almacenamiento `regresaacasa<hash>` | StorageV2, **Standard_LRS**, nivel Hot | La opción más barata; suficiente para el MVP |
-| | Solo HTTPS, **TLS 1.2 mínimo** | Nada viaja sin cifrar |
-| | Acceso público a blobs **permitido** | Las fotos del muro se ven sin iniciar sesión |
-| | Acceso con llave compartida **permitido** | La API firma las URLs SAS con la llave |
-| Servicio de blobs | CORS: `GET, PUT, OPTIONS` solo desde los orígenes configurados | Necesario solo para Expo Web; la app nativa no usa CORS |
-| | Papelera de blobs: 7 días | Recuperar fotos borradas por error |
-| Contenedor `pet-images` | Acceso público nivel **Blob** | Se puede leer cada foto por su URL, pero **no** listar el contenedor |
+| Recurso | Configuración |
+|---|---|
+| Cuenta de almacenamiento | StorageV2, **Standard_LRS** (la más barata), nivel Hot |
+| | Solo HTTPS, TLS 1.2 mínimo |
+| | Acceso anónimo a blobs: **deshabilitado** |
+| | Acceso con llave de cuenta: **habilitado** (la API firma las SAS con ella) |
+| Servicio de blobs | CORS `GET, PUT, OPTIONS` solo desde los orígenes indicados (solo lo usa Expo Web) · papelera de 7 días |
+| Contenedor (`pet-images` o el tuyo) | Nivel de acceso: **Privado** |
 
-Restricciones que impone la API al firmar cada URL SAS
-([`AzureBlobImageUploadService`](../backend/src/RegresaACasa.Api/Services/AzureBlobImageUploadService.cs)):
+Si ya tienes una cuenta (por ejemplo, `up23`), solo necesitas que cumpla lo anterior; la API crea el
+contenedor privado si no existe.
 
-- Permisos **Create + Write** sobre **un solo blob**: no permite leer, listar ni borrar otras fotos.
-- Vence en `AzureBlob__SasExpiryMinutes` minutos (10 por defecto, máximo 60).
-- Nombre aleatorio (`<guid>.jpg`) generado por la API: el cliente no elige la ruta.
-- Solo `image/jpeg`, `image/png` o `image/webp`.
+## 3. Crear el Storage
 
-> Una SAS no puede limitar el tamaño del archivo. La app comprime la foto (`quality: 0.7`); si hace
-> falta un límite estricto, el siguiente paso es validar el tamaño del blob antes de guardar la publicación.
-
-Costo aproximado: Standard_LRS cobra centavos de dólar por GB al mes más las operaciones; para un MVP
-escolar es prácticamente cero, y cabe en el crédito de Azure for Students.
-
-## 2. Crear el Storage
-
-### Opción A: script (recomendada)
+### Opción A: script
 
 ```powershell
 winget install -e --id Microsoft.AzureCLI
@@ -48,39 +69,21 @@ az login
 ./infra/deploy-storage.ps1
 ```
 
-El script:
-1. crea el grupo de recursos,
-2. despliega `storage.bicep` (cuenta + contenedor + CORS),
-3. escribe `AzureBlob__ConnectionString` y `AzureBlob__ContainerName` en `backend/.env`,
-   **sin mostrar la llave en pantalla**.
+Crea el grupo de recursos, despliega `storage.bicep` y escribe `AzureBlob__ConnectionString` y
+`AzureBlob__ContainerName` en `backend/.env` **sin mostrar la llave**. Si Azure responde
+`RequestDisallowedByPolicy` (típico en Azure for Students), usa otra región: `-Location eastus`.
 
-Parámetros útiles:
+### Opción B: portal de Azure
 
-```powershell
-./infra/deploy-storage.ps1 -Location eastus -CorsOrigins 'http://localhost:8081','https://mi-dominio.com'
-```
-
-Si Azure responde `RequestDisallowedByAzure` o `RequestDisallowedByPolicy`, tu suscripción (típico en
-Azure for Students) no permite esa región; repite con otra `-Location` (`eastus`, `eastus2`, `westus2`...).
-
-### Opción B: portal de Azure (manual)
-
-1. **Crear un recurso → Cuenta de almacenamiento**.
-   - Grupo de recursos: `rg-regresaacasa` · Nombre: `regresaacasa` + algo único (solo minúsculas y números).
-   - Rendimiento: **Estándar** · Redundancia: **LRS**.
-2. Pestaña **Opciones avanzadas**:
-   - Requerir transferencia segura: **Sí** · TLS mínimo: **1.2**.
-   - **Permitir el acceso anónimo a blobs individuales: Sí** (sin esto las fotos no se ven).
-   - Habilitar el acceso a la clave de la cuenta de almacenamiento: **Sí**.
-3. Crear y abrir la cuenta → **Contenedores → + Contenedor**.
-   - Nombre: `pet-images` · Nivel de acceso: **Blob (acceso de lectura anónimo solo para blobs)**.
-4. **Uso compartido de recursos (CORS) → Blob service** (solo si usarás Expo Web):
-   orígenes `http://localhost:8081`, métodos `GET, PUT, OPTIONS`, encabezados permitidos `content-type,x-ms-*`,
-   encabezados expuestos `etag`, edad máxima `3600`.
-5. **Claves de acceso → Mostrar → Cadena de conexión** de `key1` y pégala en `backend/.env`:
+1. **Crear un recurso → Cuenta de almacenamiento**. Rendimiento **Estándar**, redundancia **LRS**.
+2. En **Opciones avanzadas**: transferencia segura **Sí**, TLS mínimo **1.2**, acceso anónimo a blobs
+   **No**, acceso con clave de cuenta **Sí**.
+3. **Contenedores → + Contenedor** con nivel de acceso **Privado**.
+4. **Claves de acceso → Mostrar → Cadena de conexión** y pégala en `backend/.env`:
 
    ```
    AzureBlob__ConnectionString=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+   AzureBlob__ContainerName=<tu-contenedor>
    ```
 
 ### Verificar
@@ -95,64 +98,52 @@ En otra terminal:
 Invoke-RestMethod -Method Post http://localhost:5105/api/v1/uploads/images -ContentType 'application/json' -Body '{"content_type":"image/jpeg"}'
 ```
 
-Debe devolver `upload_url`, `image_url` y `expires_at`. Si responde 503, la API no encontró
-`AzureBlob__ConnectionString`.
+Debe devolver `upload_url`, `image_url` y `expires_at`. Si abres `image_url` directo en el navegador,
+Azure debe **rechazarla** (es privada); en el muro (`GET /api/v1/pets`) aparece con firma y sí se ve.
 
-### Borrar todo
+### Si la llave se filtra
 
-```powershell
-az group delete --name rg-regresaacasa
-```
+**Portal → Cuenta de almacenamiento → Claves de acceso → Rotar clave** y actualiza `backend/.env`.
+Las SAS firmadas con la llave vieja dejan de funcionar al instante.
 
-Esto borra la cuenta y **todas las fotos** de forma permanente.
+## 4. Restricciones del .env
 
----
-
-## 3. Restricciones del .env
-
-Hay dos archivos, cada uno con su plantilla. Los archivos reales **están ignorados por git**.
-
-| Archivo real | Plantilla | Lo lee |
+| Archivo real (ignorado por git) | Plantilla | Lo lee |
 |---|---|---|
 | `backend/.env` | [`backend/.env.example`](../backend/.env.example) | La API al arrancar ([`DotEnvFile`](../backend/src/RegresaACasa.Api/Configuration/DotEnvFile.cs)) |
 | `mobile/.env.local` | [`mobile/.env.example`](../mobile/.env.example) | Expo al empaquetar la app ([`env.ts`](../mobile/src/config/env.ts)) |
 
-Las variables del sistema (por ejemplo, las del servidor de producción) tienen prioridad sobre `backend/.env`.
+Las variables del sistema tienen prioridad sobre `backend/.env`.
 
-### Backend (`backend/.env`)
+### Backend
 
-La API valida estas reglas **al arrancar**. Si algo es inválido, no inicia y muestra qué variable está mal.
+La API valida todo **al arrancar**. Si algo es inválido, no inicia y dice qué variable está mal.
 
 | Variable | Development | Otros entornos | Reglas |
 |---|---|---|---|
-| `ConnectionStrings__Default` | Opcional (vacía = BD en memoria) | **Obligatoria** | Cadena de conexión de PostgreSQL |
-| `AzureBlob__ConnectionString` | Opcional (vacía = subida responde 503) | **Obligatoria** | Debe incluir `AccountName` y `AccountKey`; fuera de Development: `https` y **sin** Azurite |
-| `AzureBlob__ContainerName` | `pet-images` | `pet-images` | 3-63 caracteres, minúsculas/números/guiones, sin `--` ni guion al inicio o final |
-| `AzureBlob__SasExpiryMinutes` | `10` | `10` | Entero de 1 a 60 |
+| `ConnectionStrings__Default` | Opcional (vacía = BD en memoria) | **Obligatoria** | PostgreSQL |
+| `AzureBlob__ConnectionString` | Opcional (vacía = subida responde 503) | **Obligatoria** | Con `AccountName` y `AccountKey`; fuera de Development: `https` y sin Azurite |
+| `AzureBlob__ContainerName` | `pet-images` | | 3-63 caracteres: minúsculas, números, guiones; sin `--` ni guion al inicio o final |
+| `AzureBlob__SasExpiryMinutes` | `10` | | 1-60 (URL de subida) |
+| `AzureBlob__ReadSasMinutes` | `60` | | 5-1440 (URLs de lectura del muro) |
+| `RateLimits__UploadsPerMinutePerIp` | `5` | | 1-1000 |
+| `RateLimits__UploadsPerDay` | `200` | | 1-100000 (tope global) |
+| `RateLimits__WritesPerMinutePerIp` | `20` | | 1-1000 |
 
-Ejemplo del error al arrancar:
+Las pruebas (`dotnet test`) ignoran `backend/.env`: siempre usan BD en memoria y nunca tocan Azure.
 
-```
-OptionsValidationException: AzureBlob:ConnectionString debe incluir AccountName y AccountKey para firmar URLs SAS
-```
-
-Las pruebas (`dotnet test`) ignoran `backend/.env` y siempre usan la BD en memoria sin Azure.
-
-### App móvil (`mobile/.env.local`)
-
-La app valida al abrir y muestra la pantalla roja de error con el mensaje si algo está mal.
+### App móvil
 
 | Variable | Requerida | Reglas |
 |---|---|---|
-| `EXPO_PUBLIC_API_URL` | **Sí** | URL `http://` o `https://`, sin query; en builds de producción **solo https** |
-| `EXPO_PUBLIC_SKIP_IMAGE_UPLOAD` | No | Solo `true` o `false`; `true` **solo en desarrollo** |
+| `EXPO_PUBLIC_API_URL` | **Sí** | URL `http(s)://` sin query; en builds de producción solo `https` |
+| `EXPO_PUBLIC_SKIP_IMAGE_UPLOAD` | No | `true`/`false`; `true` solo en desarrollo |
 
-**Regla de seguridad:** todo lo que empieza con `EXPO_PUBLIC_` queda incrustado en la app y cualquiera
-puede extraerlo. Nunca pongas ahí la llave de Azure, contraseñas ni cadenas de conexión.
+Todo lo que empieza con `EXPO_PUBLIC_` queda dentro de la app y es público: **nunca** pongas ahí la
+llave de Azure ni contraseñas.
 
 ### Reglas para el equipo
 
-- Nunca subas `backend/.env` ni `mobile/.env.local`; están en `.gitignore`.
-- Si una llave se filtra (commit, captura, chat): **Portal → Cuenta de almacenamiento → Claves de acceso →
-  Rotar clave**, y vuelve a correr `./infra/deploy-storage.ps1` para actualizar `backend/.env`.
-- Cada integrante tiene su propio `.env`; compartan las plantillas `.env.example`, no los valores.
+- Nunca subas `backend/.env` ni `mobile/.env.local`. Antes de cada commit, `git status` no debe mostrarlos.
+- No pegues la llave en capturas, chats o issues. Si pasa, rótala.
+- Cada integrante tiene su propio `.env`; se comparten las plantillas `.env.example`, no los valores.
