@@ -3,10 +3,14 @@ using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using RegresaACasa.Api.Configuration;
 using RegresaACasa.Api.Data;
 using RegresaACasa.Api.Models.Dtos;
 using RegresaACasa.Api.Services;
+
+// Variables de backend/.env (ver backend/.env.example). Las del sistema tienen prioridad.
+DotEnvFile.Load(Directory.GetCurrentDirectory());
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,8 +44,13 @@ builder.Services
 builder.Services.AddOpenApi();
 
 // ---------- Base de datos ----------
-// Con ConnectionStrings:Default => PostgreSQL. Sin ella => base en memoria (para pruebas rápidas).
+// Con ConnectionStrings:Default => PostgreSQL. Sin ella => base en memoria (solo en Development).
 var connectionString = builder.Configuration.GetConnectionString("Default");
+if (string.IsNullOrWhiteSpace(connectionString) && !builder.Environment.IsDevelopment())
+{
+    throw new InvalidOperationException("ConnectionStrings:Default es obligatorio fuera de Development");
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
     if (string.IsNullOrWhiteSpace(connectionString))
@@ -57,7 +66,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // ---------- Servicios de negocio ----------
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPetService, PetService>();
-builder.Services.Configure<AzureBlobOptions>(builder.Configuration.GetSection(AzureBlobOptions.SectionName));
+builder.Services.AddOptions<AzureBlobOptions>()
+    .Bind(builder.Configuration.GetSection(AzureBlobOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<AzureBlobOptions>, AzureBlobOptionsValidator>();
 builder.Services.AddSingleton<IImageUploadService, AzureBlobImageUploadService>();
 
 // La app móvil no necesita CORS, pero Expo Web (navegador) sí.
@@ -65,6 +78,9 @@ builder.Services.AddCors(options =>
     options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
+
+// Valida la configuración antes de tocar la base de datos (lanza OptionsValidationException).
+_ = app.Services.GetRequiredService<IOptions<AzureBlobOptions>>().Value;
 
 // ---------- Inicialización de BD ----------
 using (var scope = app.Services.CreateScope())

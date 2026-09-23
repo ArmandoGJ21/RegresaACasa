@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace RegresaACasa.Api.Tests;
 
@@ -9,7 +8,7 @@ namespace RegresaACasa.Api.Tests;
 /// Verifica que la API cumple el contrato de docs/api-contract.md
 /// (rutas, snake_case y formato de errores). Corre con la base en memoria.
 /// </summary>
-public class PetsApiTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+public class PetsApiTests(ApiFactory factory) : IClassFixture<ApiFactory>
 {
     private readonly HttpClient _client = factory.CreateClient();
 

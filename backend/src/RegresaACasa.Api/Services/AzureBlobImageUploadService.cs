@@ -17,6 +17,7 @@ public class AzureBlobImageUploadService(IOptions<AzureBlobOptions> options, Tim
     };
 
     private readonly AzureBlobOptions _options = options.Value;
+    private bool _containerReady;
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.ConnectionString);
 
@@ -28,7 +29,12 @@ public class AzureBlobImageUploadService(IOptions<AzureBlobOptions> options, Tim
         }
 
         var container = new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
-        await container.CreateIfNotExistsAsync(PublicAccessType.Blob, cancellationToken: ct);
+        if (!_containerReady)
+        {
+            // En Azure el contenedor ya lo crea infra/storage.bicep; esto cubre Azurite.
+            await container.CreateIfNotExistsAsync(PublicAccessType.Blob, cancellationToken: ct);
+            _containerReady = true;
+        }
 
         var blobName = $"{Guid.NewGuid():N}{Extensions[contentType]}";
         var blob = container.GetBlobClient(blobName);

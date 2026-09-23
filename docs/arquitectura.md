@@ -9,7 +9,7 @@ Red social de mascotas perdidas (MVP). Basada en el documento de diseño
 | App móvil | React Native + Expo (SDK 57) + TypeScript + Expo Router |
 | Backend | ASP.NET Core **.NET 10** (Web API con controladores MVC) |
 | Base de datos | PostgreSQL 17 + Entity Framework Core 10 (Npgsql) |
-| Fotos | Azure Blob Storage (Azurite en local) |
+| Fotos | Azure Blob Storage (Azurite en local) · ver [azure-blob-storage.md](azure-blob-storage.md) |
 
 Ambos lados siguen el patrón **Modelo – Vista – Controlador (MVC)**.
 
@@ -78,7 +78,7 @@ RegresaACasa.Api/
 ├── Services/             Lógica de negocio (interfaces + implementación)
 ├── Data/                 AppDbContext, migraciones, seeder
 ├── Configuration/        Opciones y ajustes de serialización
-└── Program.cs            Composición (DI, JSON snake_case, errores, BD)
+└── Program.cs            Composición (.env, DI, JSON snake_case, errores, BD)
 ```
 
 - **Modelo**: las entidades EF (`Pet`, `Comment`) representan la BD; los DTOs representan el contrato.
