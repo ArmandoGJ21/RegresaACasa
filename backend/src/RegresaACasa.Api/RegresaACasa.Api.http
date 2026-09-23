@@ -1,0 +1,37 @@
+@host = http://localhost:5105
+
+### Muro: lista de publicaciones
+GET {{host}}/api/v1/pets
+Accept: application/json
+
+### Cuestionario: nueva publicación (la foto ya está en Azure)
+POST {{host}}/api/v1/pets
+Content-Type: application/json
+
+{
+  "pet_type": "Perro",
+  "name": "Max",
+  "breed": "Labrador",
+  "color_description": "Miel con mancha blanca",
+  "zone": "Centro",
+  "contact_info": "4491234567",
+  "image_url": "https://storage.azure.com/foto.jpg"
+}
+
+### Error 400: falta zone
+POST {{host}}/api/v1/pets
+Content-Type: application/json
+
+{ "pet_type": "Gato", "color_description": "Negro", "contact_info": "4490000000", "image_url": "https://storage.azure.com/x.jpg" }
+
+### Comentario (reemplaza el id por uno real del GET)
+POST {{host}}/api/v1/pets/00000000-0000-0000-0000-000000000000/comments
+Content-Type: application/json
+
+{ "user_name": "Ana", "text": "Lo vi cerca del parque" }
+
+### URL firmada para subir foto a Azure
+POST {{host}}/api/v1/uploads/images
+Content-Type: application/json
+
+{ "content_type": "image/jpeg" }

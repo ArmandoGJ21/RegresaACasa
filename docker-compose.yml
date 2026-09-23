@@ -1,0 +1,23 @@
+# Infraestructura local: PostgreSQL + Azurite (emulador de Azure Blob Storage).
+#   docker compose up -d
+# Luego corre la API con las variables indicadas en el README.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: regresaacasa
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    command: azurite-blob --blobHost 0.0.0.0 --blobPort 10000 --loose
+    ports:
+      - "10000:10000"
+
+volumes:
+  pgdata:

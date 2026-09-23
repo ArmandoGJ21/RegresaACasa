@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Regresa a Casa",
+    "slug": "regresaacasa",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Regresa a Casa usa tus fotos para publicar la imagen de la mascota.",
+          "cameraPermission": "Regresa a Casa usa la cámara para fotografiar a la mascota."
+        }
+      ]
+    ],
+    "scheme": "regresaacasa",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

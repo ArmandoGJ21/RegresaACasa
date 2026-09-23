@@ -1,0 +1,28 @@
+{
+  "pets": [
+    {
+      "id": "123",
+      "pet_type": "Perro",
+      "name": "Max",
+      "breed": "Labrador",
+      "color_description": "Miel con mancha blanca",
+      "zone": "Centro",
+      "contact_info": "4491234567",
+      "image_url": "https://storage.azure.com/foto.jpg",
+      "comments": [
+        { "user_name": "Ana", "text": "Lo vi cerca del parque", "created_at": "2026-09-22T02:00:00Z" }
+      ]
+    },
+    {
+      "id": "124",
+      "pet_type": "Gato",
+      "name": "Luna",
+      "breed": "Siames",
+      "color_description": "Blanco con puntos grises",
+      "zone": "Pulgas",
+      "contact_info": "4497654321",
+      "image_url": "https://storage.azure.com/luna.jpg",
+      "comments": []
+    }
+  ]
+}

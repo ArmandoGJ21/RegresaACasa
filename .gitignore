@@ -1,0 +1,21 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Node / Expo (ver también mobile/.gitignore)
+node_modules/
+
+# Secretos locales
+.env
+.env.local
+appsettings.*.local.json
+
+# SO / editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
