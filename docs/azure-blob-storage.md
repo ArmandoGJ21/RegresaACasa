@@ -86,6 +86,18 @@ Crea el grupo de recursos, despliega `storage.bicep` y escribe `AzureBlob__Conne
    AzureBlob__ContainerName=<tu-contenedor>
    ```
 
+### CORS para la versión web
+
+Si la app en el navegador muestra "No se pudo subir la foto", la cuenta no tiene CORS (Azure responde
+`CorsPreflightFailure`). La app en el celular no lo necesita. Con la cadena de conexión en `backend/.env`:
+
+```powershell
+dotnet run infra/configure-cors.cs
+```
+
+Por defecto permite `http://localhost:8081`; para otros orígenes pásalos como argumentos. Azure tarda unos
+segundos en aplicarlo. Ya está configurado en la cuenta `up23`.
+
 ### Verificar
 
 ```powershell

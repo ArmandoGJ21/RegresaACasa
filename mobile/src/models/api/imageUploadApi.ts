@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import { env, PLACEHOLDER_IMAGE_URL } from '../../config/env';
 import { ApiError, request } from './httpClient';
 
@@ -22,11 +23,20 @@ export async function uploadPetImage(localUri: string, contentType: string): Pro
   });
 
   const file = await (await fetch(localUri)).blob();
-  const response = await fetch(ticket.upload_url, {
-    method: 'PUT',
-    headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': contentType },
-    body: file,
-  });
+  let response: Response;
+  try {
+    response = await fetch(ticket.upload_url, {
+      method: 'PUT',
+      headers: { 'x-ms-blob-type': 'BlockBlob', 'Content-Type': contentType },
+      body: file,
+    });
+  } catch {
+    // En la versión web, un fallo aquí casi siempre es el CORS de Azure (infra/configure-cors.cs).
+    if (__DEV__ && Platform.OS === 'web') {
+      console.warn('Azure rechazó la subida desde el navegador: configura CORS con `dotnet run infra/configure-cors.cs`.');
+    }
+    throw new ApiError('No se pudo subir la foto. Revisa tu conexión e intenta de nuevo.', 0);
+  }
 
   if (!response.ok) {
     throw new ApiError('No se pudo subir la foto', response.status);
