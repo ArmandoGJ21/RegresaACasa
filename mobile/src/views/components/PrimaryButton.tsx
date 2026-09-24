@@ -1,22 +1,17 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { colors, spacing } from '../theme';
 
-type Props = { title: string; onPress: () => void; loading?: boolean; variant?: 'solid' | 'outline' };
+type Props = { title: string; onPress: () => void; loading?: boolean };
 
-export function PrimaryButton({ title, onPress, loading = false, variant = 'solid' }: Props) {
-  const outline = variant === 'outline';
+export function PrimaryButton({ title, onPress, loading = false }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       disabled={loading}
-      style={({ pressed }) => [styles.button, outline && styles.outline, (pressed || loading) && styles.pressed]}
+      style={({ pressed }) => [styles.button, (pressed || loading) && styles.pressed]}
     >
-      {loading ? (
-        <ActivityIndicator color={outline ? colors.primary : colors.primaryText} />
-      ) : (
-        <Text style={[styles.text, outline && styles.outlineText]}>{title}</Text>
-      )}
+      {loading ? <ActivityIndicator color={colors.primaryText} /> : <Text style={styles.text}>{title}</Text>}
     </Pressable>
   );
 }
@@ -24,12 +19,12 @@ export function PrimaryButton({ title, onPress, loading = false, variant = 'soli
 const styles = StyleSheet.create({
   button: {
     backgroundColor: colors.primary,
-    borderRadius: 10,
-    paddingVertical: spacing.md,
+    borderRadius: 18,
+    minHeight: 50,
     alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
   },
-  outline: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.primary },
   pressed: { opacity: 0.7 },
-  text: { color: colors.primaryText, fontWeight: '600', fontSize: 16 },
-  outlineText: { color: colors.primary },
+  text: { color: colors.primaryText, fontSize: 16, fontWeight: '700' },
 });

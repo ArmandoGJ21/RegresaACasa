@@ -17,16 +17,16 @@ export function FormField({ label, optional, style, ...inputProps }: Props) {
 
 const styles = StyleSheet.create({
   field: { marginBottom: spacing.md },
-  label: { color: colors.text, fontWeight: '600', marginBottom: spacing.xs },
+  label: { color: colors.blue, fontWeight: '700', fontSize: 14, marginBottom: spacing.xs },
   optional: { color: colors.muted, fontWeight: '400' },
   input: {
     backgroundColor: colors.card,
-    borderColor: colors.border,
+    borderColor: colors.lightBlue,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 11,
+    minHeight: 48,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 16,
+    fontSize: 15,
     color: colors.text,
   },
 });
