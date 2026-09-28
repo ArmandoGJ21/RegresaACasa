@@ -8,7 +8,11 @@ namespace RegresaACasa.Api.Services;
 
 public class PetService(AppDbContext db, IImageStorageService images, TimeProvider clock) : IPetService
 {
-    private const int FeedSize = 100;
+    /// <summary>Máximo de publicaciones que devuelve el muro.</summary>
+    public const int FeedSize = 100;
+
+    public const string ForeignImageError =
+        "El campo 'image_url' debe ser una foto subida con /api/v1/uploads/images";
 
     public async Task<IReadOnlyList<PetResponse>> GetRecentAsync(CancellationToken ct = default)
     {
@@ -21,8 +25,15 @@ public class PetService(AppDbContext db, IImageStorageService images, TimeProvid
         return pets.Select(p => p.ToResponse(images.ToReadUrl)).ToList();
     }
 
-    public async Task<PetResponse> CreateAsync(CreatePetRequest request, CancellationToken ct = default)
+    public async Task<Result<PetResponse>> CreateAsync(CreatePetRequest request, CancellationToken ct = default)
     {
+        // Regla de negocio: solo fotos subidas con /api/v1/uploads/images (evita enlaces externos).
+        var imageUrl = request.ImageUrl!.Trim();
+        if (!images.IsAcceptedImageUrl(imageUrl))
+        {
+            return Result<PetResponse>.Failure(ForeignImageError);
+        }
+
         var pet = new Pet
         {
             Id = Guid.NewGuid(),
@@ -32,12 +43,12 @@ public class PetService(AppDbContext db, IImageStorageService images, TimeProvid
             ColorDescription = request.ColorDescription!.Trim(),
             Zone = request.Zone!.Trim(),
             ContactInfo = request.ContactInfo!.Trim(),
-            ImageUrl = request.ImageUrl!.Trim(),
+            ImageUrl = imageUrl,
             CreatedAt = clock.GetUtcNow().UtcDateTime,
         };
 
         db.Pets.Add(pet);
         await db.SaveChangesAsync(ct);
-        return pet.ToResponse(images.ToReadUrl);
+        return Result<PetResponse>.Success(pet.ToResponse(images.ToReadUrl));
     }
 }

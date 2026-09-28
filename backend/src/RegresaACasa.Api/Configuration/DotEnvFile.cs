@@ -2,17 +2,18 @@ namespace RegresaACasa.Api.Configuration;
 
 /// <summary>
 /// Carga un archivo .env (KEY=VALUE) como variables de entorno antes de construir la app.
-/// Busca desde el directorio actual hacia arriba (p. ej. backend/.env) y nunca
-/// sobrescribe variables que ya existan en el sistema.
+/// Busca desde el directorio actual hacia arriba hasta la carpeta de la solución
+/// (la que tiene RegresaACasa.slnx, es decir backend/.env) y nunca sobrescribe
+/// variables que ya existan en el sistema.
 /// </summary>
 public static class DotEnvFile
 {
-    public static string? Load(string startDirectory)
+    public static void Load(string startDirectory)
     {
         var path = Find(startDirectory);
         if (path is null)
         {
-            return null;
+            return;
         }
 
         foreach (var raw in File.ReadAllLines(path))
@@ -36,8 +37,6 @@ public static class DotEnvFile
                 Environment.SetEnvironmentVariable(key, value);
             }
         }
-
-        return path;
     }
 
     private static string? Find(string startDirectory)
@@ -50,8 +49,8 @@ public static class DotEnvFile
                 return candidate;
             }
 
-            // No salir del repositorio.
-            if (Directory.Exists(Path.Combine(dir.FullName, ".git")))
+            // No salir de la carpeta de la solución.
+            if (dir.EnumerateFiles("*.slnx").Any())
             {
                 return null;
             }

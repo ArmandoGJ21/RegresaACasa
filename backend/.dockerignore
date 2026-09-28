@@ -1,0 +1,7 @@
+# Nunca meter secretos ni compilados locales en la imagen.
+.env
+**/bin/
+**/obj/
+tests/
+**/*.user
+.vs/

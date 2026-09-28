@@ -15,6 +15,7 @@ reportar y un **detalle** con el teléfono del dueño para avisar si alguien vio
 | [docs/api-contract.md](docs/api-contract.md) | Endpoints, requests/responses y errores |
 | [docs/modelo-datos.md](docs/modelo-datos.md) | Esquema ER y migraciones |
 | [docs/azure-blob-storage.md](docs/azure-blob-storage.md) | Crear el Azure Blob Storage y restricciones del `.env` |
+| [backend/README.md](backend/README.md) | Guía del código del backend, archivo por archivo |
 | [docs/mockups-backend-mascotas-perdidas.md](docs/mockups-backend-mascotas-perdidas.md) | Documento de diseño original |
 
 ## Estructura del repositorio
@@ -58,7 +59,9 @@ La configuración va en `backend/.env` (ignorado por git). Parte de la plantilla
 cp backend/.env.example backend/.env
 ```
 
-- **PostgreSQL local:** `docker compose up -d` y descomenta `ConnectionStrings__Default`.
+- **Todo en Docker (PostgreSQL + API):** `docker compose up -d --build postgres api` → API en
+  `http://localhost:5105` con PostgreSQL; no hace falta tocar `ConnectionStrings__Default`.
+- **Solo PostgreSQL en Docker:** `docker compose up -d postgres` y descomenta `ConnectionStrings__Default`.
   Las migraciones se aplican solas al arrancar.
 - **Fotos en Azure real:** `az login` y luego `./infra/deploy-storage.ps1`; crea el Storage y escribe
   la cadena de conexión en `backend/.env`. Guía completa: [docs/azure-blob-storage.md](docs/azure-blob-storage.md).

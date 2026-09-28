@@ -7,7 +7,11 @@ using RegresaACasa.Api.Models.Dtos;
 
 namespace RegresaACasa.Api.Services;
 
-public partial class AzureBlobImageStorageService(IOptions<AzureBlobOptions> options, TimeProvider clock) : IImageStorageService
+/// <summary>
+/// Singleton: una sola instancia atiende todas las peticiones. Por eso el cliente de Azure se crea
+/// una vez en el constructor (sin estado que cambie entre hilos, salvo la bandera del contenedor).
+/// </summary>
+public partial class AzureBlobImageStorageService : IImageStorageService
 {
     private static readonly Dictionary<string, string> Extensions = new()
     {
@@ -16,14 +20,24 @@ public partial class AzureBlobImageStorageService(IOptions<AzureBlobOptions> opt
         ["image/webp"] = ".webp",
     };
 
-    private readonly AzureBlobOptions _options = options.Value;
-    private BlobContainerClient? _container;
-    private bool _containerReady;
+    private readonly AzureBlobOptions _options;
+    private readonly TimeProvider _clock;
+    private readonly BlobContainerClient? _container;
+
+    // Si dos peticiones llegan a la vez ambas pueden llamar CreateIfNotExists: es idempotente.
+    private volatile bool _containerReady;
+
+    public AzureBlobImageStorageService(IOptions<AzureBlobOptions> options, TimeProvider clock)
+    {
+        _options = options.Value;
+        _clock = clock;
+        _container = IsConfigured ? new BlobContainerClient(_options.ConnectionString, _options.ContainerName) : null;
+    }
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_options.ConnectionString);
 
     private BlobContainerClient Container =>
-        _container ??= new BlobContainerClient(_options.ConnectionString, _options.ContainerName);
+        _container ?? throw new InvalidOperationException("Azure Blob Storage no está configurado.");
 
     public async Task<ImageUploadResponse> CreateUploadUrlAsync(string contentType, CancellationToken ct = default)
     {
@@ -40,7 +54,7 @@ public partial class AzureBlobImageStorageService(IOptions<AzureBlobOptions> opt
         }
 
         var blob = Container.GetBlobClient($"{Guid.NewGuid():N}{Extensions[contentType]}");
-        var expiresAt = clock.GetUtcNow().AddMinutes(_options.SasExpiryMinutes);
+        var expiresAt = _clock.GetUtcNow().AddMinutes(_options.SasExpiryMinutes);
 
         var sas = new BlobSasBuilder(BlobSasPermissions.Create | BlobSasPermissions.Write, expiresAt)
         {
@@ -64,7 +78,7 @@ public partial class AzureBlobImageStorageService(IOptions<AzureBlobOptions> opt
 
         // Generar la SAS es un cálculo local (sin llamadas a Azure), así que no hace lento el muro.
         var blob = Container.GetBlobClient(blobName);
-        var sas = new BlobSasBuilder(BlobSasPermissions.Read, clock.GetUtcNow().AddMinutes(_options.ReadSasMinutes))
+        var sas = new BlobSasBuilder(BlobSasPermissions.Read, _clock.GetUtcNow().AddMinutes(_options.ReadSasMinutes))
         {
             BlobContainerName = Container.Name,
             BlobName = blobName,

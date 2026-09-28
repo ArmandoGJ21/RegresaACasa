@@ -1,6 +1,12 @@
-# Infraestructura local: PostgreSQL + Azurite (emulador de Azure Blob Storage).
-#   docker compose up -d
-# Luego corre la API con las variables indicadas en el README.
+# Entorno local con Docker: PostgreSQL + API (+ Azurite opcional).
+#
+#   docker compose up -d --build postgres api     # base de datos + API en http://localhost:5105
+#   docker compose up -d postgres                 # solo la base (para correr la API con dotnet run)
+#   docker compose down                           # detener (los datos quedan en el volumen pgdata)
+#
+# La API toma la llave de Azure de backend/.env (si existe) y siempre usa la base "postgres" de aquí.
+name: regresaacasa
+
 services:
   postgres:
     image: postgres:17
@@ -12,6 +18,26 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d regresaacasa"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=regresaacasa;Username=postgres;Password=postgres
+    ports:
+      - "${API_PORT:-5105}:8080"
+    restart: unless-stopped
 
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite

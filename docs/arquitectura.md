@@ -73,22 +73,24 @@ RegresaACasa.Api/
 ├── Models/               ← M
 │   ├── Entities/                Pet (tabla)
 │   ├── Dtos/                    Request/Response = la "Vista" JSON
-│   └── PetMappings.cs           Entidad → DTO
+│   ├── PetMappings.cs           Entidad → DTO
+│   └── Result.cs                Resultado de negocio (valor o error)
 ├── Services/             Lógica de negocio (interfaces + implementación)
 ├── Data/                 AppDbContext, migraciones, seeder
 ├── Configuration/        Opciones y ajustes de serialización
-└── Program.cs            Composición (.env, DI, JSON snake_case, errores, BD)
+├── Extensions/           Registro de servicios y pasos de arranque (AddDatabase, AddRateLimits...)
+└── Program.cs            Arranque en 4 pasos; llama a Extensions/
 ```
 
 - **Modelo**: la entidad EF `Pet` representa la BD; los DTOs representan el contrato.
 - **Vista**: en una API la vista es la representación JSON. Los DTOs (`PetResponse`, `ErrorResponse`,
   `ImageUploadResponse`) + la política `snake_case` definen exactamente qué ve el cliente
   (p. ej. `created_at` existe en BD pero no se expone).
-- **Controlador**: delgado; no toca EF directamente, llama a `IPetService`.
+- **Controlador**: delgado; no toca EF ni reglas de negocio, llama a `IPetService`.
 - **Servicios**: capa entre controlador y datos para que la lógica sea testeable. No se agregó un
   patrón Repository porque `DbContext` ya cumple ese rol (Unit of Work + Repository).
 
-Convenciones transversales (en `Program.cs`):
+Convenciones transversales (en `Extensions/`):
 - JSON en `snake_case` (`JsonNamingPolicy.SnakeCaseLower`).
 - Errores de validación → `400 { "success": false, "message": "El campo 'zone' es requerido" }`.
 - Excepciones no controladas → `500 { "success": false, "message": "Ocurrió un error inesperado" }`.
@@ -139,6 +141,8 @@ Pantallas: **Muro**, **Cuestionario** y **Detalle** de la publicación (con bot�
 | `id` | `"123"` | UUID (string) | El ER define `uuid`; `mock/db.json` sigue sirviendo para el mock |
 | `name`, `breed` | sin especificar | Opcionales | Una mascota encontrada puede no tener nombre/raza conocidos |
 | Orden del muro | "recientes" | `created_at` desc, máx. 100 | Evita respuestas enormes |
+
+Guía detallada del código: [backend/README.md](../backend/README.md).
 
 Pendientes naturales para después del MVP: paginación del muro, filtro por `zone`,
 autenticación (hoy todos los usuarios comparten permisos, como pide el diseño).

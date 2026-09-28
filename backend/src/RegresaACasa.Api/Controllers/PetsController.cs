@@ -7,14 +7,14 @@ using RegresaACasa.Api.Services;
 namespace RegresaACasa.Api.Controllers;
 
 /// <summary>
-/// Controlador del muro de publicaciones y del cuestionario de reporte.
+/// Muro de publicaciones y cuestionario de reporte. Solo traduce HTTP ⇄ PetService.
 /// </summary>
 [ApiController]
 [Route("api/v1/pets")]
 [Produces("application/json")]
-public class PetsController(IPetService pets, IImageStorageService images) : ControllerBase
+public class PetsController(IPetService pets) : ControllerBase
 {
-    /// <summary>Lista las publicaciones más recientes.</summary>
+    /// <summary>GET /api/v1/pets — las publicaciones más recientes.</summary>
     [HttpGet]
     [ProducesResponseType<IReadOnlyList<PetResponse>>(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<PetResponse>>> GetAll(CancellationToken ct)
@@ -22,7 +22,7 @@ public class PetsController(IPetService pets, IImageStorageService images) : Con
         return Ok(await pets.GetRecentAsync(ct));
     }
 
-    /// <summary>Crea una publicación. La foto ya debe estar subida a Azure (image_url).</summary>
+    /// <summary>POST /api/v1/pets — crea una publicación; la foto ya debe estar subida (image_url).</summary>
     [HttpPost]
     [EnableRateLimiting(RateLimitPolicies.Writes)]
     [ProducesResponseType<PetResponse>(StatusCodes.Status201Created)]
@@ -30,12 +30,9 @@ public class PetsController(IPetService pets, IImageStorageService images) : Con
     [ProducesResponseType<ErrorResponse>(StatusCodes.Status429TooManyRequests)]
     public async Task<ActionResult<PetResponse>> Create(CreatePetRequest request, CancellationToken ct)
     {
-        if (!images.IsAcceptedImageUrl(request.ImageUrl!))
-        {
-            return BadRequest(new ErrorResponse("El campo 'image_url' debe ser una foto subida con /api/v1/uploads/images"));
-        }
-
-        var pet = await pets.CreateAsync(request, ct);
-        return StatusCode(StatusCodes.Status201Created, pet);
+        var result = await pets.CreateAsync(request, ct);
+        return result.IsSuccess
+            ? StatusCode(StatusCodes.Status201Created, result.Value)
+            : BadRequest(new ErrorResponse(result.Error!));
     }
 }
