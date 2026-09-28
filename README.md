@@ -22,78 +22,103 @@ reportar y un **detalle** con el teléfono del dueño para avisar si alguien vio
 
 ```
 RegresaACasa/
-├── backend/                 Solución .NET 10 (RegresaACasa.slnx)
-│   ├── src/RegresaACasa.Api/     Controllers · Models · Services · Data
-│   └── tests/RegresaACasa.Api.Tests/  Pruebas de integración del contrato
+├── backend/                 API .NET 10 (RegresaACasa.slnx) + Dockerfile
+│   ├── src/RegresaACasa.Api/     Controllers · Services · Models · Data · Extensions
+│   └── tests/RegresaACasa.Api.Tests/  38 pruebas automáticas
 ├── mobile/                  App Expo (src/app · models · controllers · views)
+├── infra/                   Azure: storage.bicep, deploy-storage.ps1, configure-cors.cs
 ├── mock/db.json             Datos falsos para json-server
-├── infra/                   Azure: storage.bicep + deploy-storage.ps1
 ├── docs/                    Documentación
-└── docker-compose.yml       PostgreSQL + Azurite para desarrollo
+└── docker-compose.yml       PostgreSQL + API (+ Azurite opcional)
 ```
 
-## Requisitos
+## Cómo ejecutarlo
 
-- [.NET SDK 10](https://dotnet.microsoft.com/download)
-- [Node.js 20+](https://nodejs.org) y la app **Expo Go** en el celular (o un emulador)
-- Opcional: Docker (para PostgreSQL y Azurite)
-- Opcional: [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli-windows) para crear el Blob Storage
+### 0. Antes de empezar
 
-## Cómo correrlo
+| Necesitas | Para qué |
+|---|---|
+| [Docker Desktop](https://www.docker.com/products/docker-desktop/) **encendido** | Correr la API con PostgreSQL (opción A, recomendada) |
+| [.NET SDK 10](https://dotnet.microsoft.com/download) | Correr la API sin Docker (opción B) y las pruebas |
+| [Node.js 20+](https://nodejs.org) | La app móvil |
+| App **Expo Go** en el celular, o un emulador | Ver la app en el teléfono |
 
-### 1. Backend (modo rápido, BD en memoria)
+Trae los últimos cambios:
 
 ```bash
-cd backend
-dotnet run --project src/RegresaACasa.Api --launch-profile http
+git pull
 ```
 
-La API queda en `http://localhost:5105` con datos de ejemplo. Prueba:
-`GET http://localhost:5105/api/v1/pets`.
-
-### 2. Backend con PostgreSQL y Azure Blob Storage
-
-La configuración va en `backend/.env` (ignorado por git). Parte de la plantilla:
+### 1. Configuración (solo la primera vez)
 
 ```bash
 cp backend/.env.example backend/.env
+cp mobile/.env.example mobile/.env.local
 ```
 
-- **Todo en Docker (PostgreSQL + API):** `docker compose up -d --build postgres api` → API en
-  `http://localhost:5105` con PostgreSQL; no hace falta tocar `ConnectionStrings__Default`.
-- **Solo PostgreSQL en Docker:** `docker compose up -d postgres` y descomenta `ConnectionStrings__Default`.
-  Las migraciones se aplican solas al arrancar.
-- **Fotos en Azure real:** `az login` y luego `./infra/deploy-storage.ps1`; crea el Storage y escribe
-  la cadena de conexión en `backend/.env`. Guía completa: [docs/azure-blob-storage.md](docs/azure-blob-storage.md).
-- **Fotos en local (Azurite):** `AzureBlob__ConnectionString=UseDevelopmentStorage=true`.
+- **`backend/.env`:** para subir fotos necesita `AzureBlob__ConnectionString` y
+  `AzureBlob__ContainerName`. Pídeselas a Armando **por mensaje privado** o crea tu propio Storage
+  ([docs/azure-blob-storage.md](docs/azure-blob-storage.md)). Sin ellas la API funciona igual, pero
+  subir fotos responde 503.
+- **`mobile/.env.local`:** `EXPO_PUBLIC_API_URL` es la dirección de la API (ver paso 3).
+- Ninguno de los dos se sube a git.
+
+### 2. Levantar el backend (elige una opción)
+
+#### Opción A — Docker con PostgreSQL (recomendada)
+
+Desde la raíz del repositorio:
+
+```bash
+docker compose up -d --build postgres api
+```
+
+- Levanta **PostgreSQL 17** y la **API** en `http://localhost:5105`.
+- La primera vez tarda unos minutos (descarga imágenes). La API crea las tablas y carga dos mascotas
+  de ejemplo (Max y Luna).
+- Los datos se guardan en Docker y **no se borran** al apagar.
+
+| Para… | Comando |
+|---|---|
+| Ver el log de la API | `docker compose logs -f api` |
+| Apagar | `docker compose down` |
+| Apagar y **borrar** los datos | `docker compose down -v` |
+| Usar otro puerto (ej. 5200) | `API_PORT=5200 docker compose up -d --build postgres api` |
+| Aplicar cambios del código | `docker compose up -d --build api` |
+
+#### Opción B — Sin Docker (rápido, datos en memoria)
 
 ```bash
 cd backend
 dotnet run --project src/RegresaACasa.Api --launch-profile http
 ```
 
-La API valida las variables al arrancar y no inicia si alguna es inválida
-([restricciones del .env](docs/azure-blob-storage.md#3-restricciones-del-env)).
+API en `http://localhost:5105`. Los datos se **borran** al detener la API (Ctrl+C).
 
-> Con Azurite, las URLs apuntan a `127.0.0.1`, que un celular físico no alcanza. Para probar fotos en
-> un dispositivo usa una cuenta real de Azure o `EXPO_PUBLIC_SKIP_IMAGE_UPLOAD=true`.
+> Usa solo una opción a la vez: las dos ocupan el puerto 5105.
 
-### 3. App móvil
+**Comprueba que funciona:** abre http://localhost:5105/api/v1/pets en el navegador. Debe mostrar
+las mascotas en JSON.
+
+### 3. Levantar la app móvil
 
 ```bash
 cd mobile
 npm install
-cp .env.example .env.local
 npm start
 ```
 
-Ajusta `EXPO_PUBLIC_API_URL` en `.env.local` (obligatoria; la app valida el formato al abrir):
-- Emulador Android: `http://10.0.2.2:5105`
-- Celular físico (misma red Wi-Fi): `http://<IP-de-tu-PC>:5105`
+En `mobile/.env.local`, pon en `EXPO_PUBLIC_API_URL` la dirección según dónde abras la app:
 
-Escanea el QR con Expo Go.
+| Dónde | `EXPO_PUBLIC_API_URL` | Cómo abrirla |
+|---|---|---|
+| Navegador | `http://localhost:5105` | Tecla `w` en la terminal de Expo |
+| Emulador Android | `http://10.0.2.2:5105` | Tecla `a` |
+| Celular (misma Wi-Fi) | `http://<IP-de-tu-PC>:5105` (ver `ipconfig`) | Escanea el QR con Expo Go |
 
-### Pruebas y verificación
+Si cambias `.env.local`, detén Expo (Ctrl+C) y vuelve a correr `npm start`.
+
+### 4. Pruebas
 
 ```bash
 cd backend
@@ -105,9 +130,22 @@ cd mobile
 npm run typecheck
 ```
 
+### Problemas comunes
+
+| Mensaje o síntoma | Causa | Solución |
+|---|---|---|
+| `error during connect` / `Cannot connect to the Docker daemon` | Docker Desktop apagado | Ábrelo y espera a que diga "Engine running" |
+| `port is already allocated` o la API no arranca por el puerto | Otra API ya usa el 5105 | Apaga la otra, o usa `API_PORT=5200` |
+| `Falta EXPO_PUBLIC_API_URL` | No existe `mobile/.env.local` o Expo arrancó antes de crearlo | Crea el archivo y reinicia `npm start` |
+| `No se pudo conectar con el servidor` | La API no está corriendo o la URL es incorrecta | Revisa el paso 2 y la tabla del paso 3 |
+| `Unable to resolve "react-native-web"` | Faltan dependencias | `npm install` dentro de `mobile/` |
+| Subir foto responde **503** | Falta la configuración de Azure | Llena `AzureBlob__*` en `backend/.env` |
+| `No se pudo subir la foto` solo en el navegador | La cuenta de Azure no tiene CORS | `dotnet run infra/configure-cors.cs` ([detalles](docs/azure-blob-storage.md)) |
+| La API se detiene al arrancar con un mensaje de configuración | Una variable del `.env` es inválida | El mensaje dice cuál; reglas en [docs/azure-blob-storage.md](docs/azure-blob-storage.md#4-restricciones-del-env) |
+
 ### Mock para el equipo de Frontend
 
-Si el backend no está listo, `mock/db.json` funciona con json-server (solo lectura del muro):
+Si el backend no está disponible, `mock/db.json` funciona con json-server (solo lectura del muro):
 
 ```bash
 npx json-server --watch mock/db.json --port 3000
