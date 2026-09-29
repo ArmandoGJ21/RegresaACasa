@@ -97,6 +97,46 @@ Convenciones transversales (en `Extensions/`):
 - Sin `ConnectionStrings:Default` la API usa una BD **en memoria** (arranque sin instalar nada);
   con ella usa PostgreSQL y aplica migraciones al iniciar.
 
+### Decisión: estructura de carpetas `src/` y `tests/`
+
+El backend no usa la estructura que crea por defecto la plantilla de Visual Studio (cada proyecto
+junto a la solución). Sigue la convención `src/` + `tests/`:
+
+```
+backend/
+├── RegresaACasa.slnx                  Solución: apunta a los dos proyectos
+├── Dockerfile · .dockerignore · .env.example · README.md
+├── src/RegresaACasa.Api/              Código que se publica (producción)
+└── tests/RegresaACasa.Api.Tests/      Código que solo verifica (nunca se publica)
+```
+
+**Por qué:**
+
+| Motivo | Cómo se ve en este proyecto |
+|---|---|
+| Separa lo que se publica de lo que solo verifica | Todo lo de `src/` va a producción; `tests/` nunca |
+| Imagen de Docker más ligera y segura | `Dockerfile` copia solo `src/` (`COPY src/ src/`) y `.dockerignore` excluye `tests/` |
+| Raíz ordenada | En `backend/` solo quedan la solución, Docker, la plantilla de `.env` y la guía |
+| Crece sin reorganizar | Un proyecto nuevo (p. ej. un worker) va en `src/` sin mezclarse con las pruebas |
+
+**Es una convención de la comunidad .NET, no un invento del proyecto:**
+
+- David Fowler, arquitecto de ASP.NET Core en Microsoft, la recomienda en
+  [".NET project structure"](https://gist.github.com/davidfowl/ed7564297c61fe9ab814):
+  `src/` para el código del producto y `tests/` para las pruebas.
+- La app de referencia oficial de Microsoft, [eShop](https://github.com/dotnet/eShop), usa `src/` y
+  `tests/` en la raíz.
+
+**Qué no cambia:** para .NET es transparente. La solución `RegresaACasa.slnx` indica dónde está cada
+proyecto y el de pruebas referencia a la API con una ruta relativa
+(`..\..\src\RegresaACasa.Api\RegresaACasa.Api.csproj`). Compilar, ejecutar y probar funciona igual.
+En Visual Studio se ven los mismos dos proyectos, agrupados en las carpetas de solución **src** y
+**tests** (así están declarados en el `.slnx`).
+
+**Costo:** un nivel más de carpetas (rutas un poco más largas) y no es la plantilla por defecto,
+así que alguien nuevo puede sorprenderse al principio. Para una sola API sin pruebas bastaría la
+plantilla; con pruebas, Docker e infraestructura, la separación sí aporta.
+
 ## 4. MVC en la app móvil (`mobile/src`)
 
 ```
